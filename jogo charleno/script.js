@@ -1,67 +1,73 @@
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-const scoreEl = document.getElementById("score");
+const grid = document.getElementById('grid');
+const message = document.getElementById('message');
+const resetBtn = document.getElementById('resetBtn');
 
-const player = { x: 180, y: 550, w: 40, h: 40, speed: 5 };
-const obstacles = [];
-let score = 0;
+const size = 5;
+let cells = [];
 
-function drawPlayer() {
-  ctx.fillStyle = "lime";
-  ctx.fillRect(player.x, player.y, player.w, player.h);
-}
+function createGrid() {
+  grid.innerHTML = '';
+  cells = [];
 
-function drawObstacles() {
-  ctx.fillStyle = "red";
-  for (let o of obstacles) {
-    ctx.fillRect(o.x, o.y, o.w, o.h);
+  for (let i = 0; i < size * size; i++) {
+    const cell = document.createElement('div');
+    cell.classList.add('cell', 'on');
+    cell.dataset.index = i;
+    grid.appendChild(cell);
+    cells.push(cell);
+
+    cell.addEventListener('click', () => toggleCells(i));
   }
 }
 
-function moveObstacles() {
-  for (let o of obstacles) {
-    o.y += 4;
-    if (o.y > canvas.height) {
-      obstacles.splice(obstacles.indexOf(o), 1);
-      score++;
-      scoreEl.textContent = score;
+// Liga/desliga um quadrado e seus vizinhos
+function toggleCells(index) {
+  const toggle = idx => {
+    if (idx >= 0 && idx < cells.length) {
+      cells[idx].classList.toggle('off');
+      cells[idx].classList.toggle('on');
     }
+  };
 
-    // colisão
-    if (
-      o.x < player.x + player.w &&
-      o.x + o.w > player.x &&
-      o.y < player.y + player.h &&
-      o.y + o.h > player.y
-    ) {
-      alert("💥 Você perdeu! Pontuação: " + score);
-      location.reload();
-    }
+  toggle(index); // clicado
+  const row = Math.floor(index / size);
+  const col = index % size;
+
+  toggle(index - size); // cima
+  toggle(index + size); // baixo
+  toggle(index - 1 >= row * size ? index - 1 : -1); // esquerda
+  toggle(index + 1 < row * size + size ? index + 1 : -1); // direita
+
+  checkWin();
+}
+
+function checkWin() {
+  const allOff = cells.every(cell => cell.classList.contains('off'));
+  if (allOff) {
+    message.textContent = 'Parabéns! Você desligou todas as luzes!';
+  } else {
+    message.textContent = '';
   }
 }
 
-function spawnObstacle() {
-  const x = Math.floor(Math.random() * (canvas.width - 40));
-  obstacles.push({ x, y: -40, w: 40, h: 40 });
+function randomizeGrid() {
+  // Começa com um estado aleatório
+  for (let i = 0; i < cells.length; i++) {
+    if (Math.random() > 0.5) {
+      cells[i].classList.add('off');
+      cells[i].classList.remove('on');
+    } else {
+      cells[i].classList.add('on');
+      cells[i].classList.remove('off');
+    }
+  }
+  message.textContent = '';
 }
 
-let keys = {};
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
+resetBtn.addEventListener('click', () => {
+  createGrid();
+  randomizeGrid();
+});
 
-function movePlayer() {
-  if (keys["ArrowLeft"] && player.x > 0) player.x -= player.speed;
-  if (keys["ArrowRight"] && player.x + player.w < canvas.width) player.x += player.speed;
-}
-
-function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  movePlayer();
-  moveObstacles();
-  drawPlayer();
-  drawObstacles();
-  requestAnimationFrame(gameLoop);
-}
-
-setInterval(spawnObstacle, 800);
-gameLoop();
+createGrid();
+randomizeGrid();
